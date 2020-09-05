@@ -1,0 +1,38 @@
+---
+title: About
+layout: page-sidebar
+permalink: "/about.html"
+image: assets/2020/fastcfs/logo.png
+comments: true
+---
+
+{% assign preangel = site.developers | where: 'slug', 'preangel' | first %}
+
+{% assign partners = '' | split: ',' %}
+{% for person in site.peoples %}
+  {% if preangel.people contains person.slug %}
+     {% assign partners = partners | push: person %}
+  {% endif %}
+{% endfor %}
+
+<div class="container">
+<div class="row gap-y listrecent listauthor">
+  {% assign item_type = 'peoples' %}
+  {% for item in partners %}
+    {% include main-loop-card-item.html %}
+  {% endfor %}
+
+</div>
+</div>
+
+## Fastcfs
+
+[Docker](https://github.com/happyfish100/FastCFS).
+
+## VOICE OF USERS
+
+> "太好用"
+> &mdash; <cite>@yuqing, Founder of Fastcfs</cite>
+
+
+Made with <i class="fa fa-heart text-danger"></i> by <a href="/developers/PeterZhang/">@zhangchunsheng</a>
