@@ -78,7 +78,7 @@ The titles in markdown files will be added an anchor automatically, you can use 
 Say you have a title as `### 我是? a title.bat`. Then you will get the anchor generated as `我是-a-titlebat`. And you can use the generated anchor to implement your own links. Like this:
 
 ```markdown
-[索米的Link](#我是-a-titlebat)
+[FastCFS的Link](#我是-a-titlebat)
 ```
 
 ## Usage
