@@ -7,4 +7,6 @@ https://github.com/wowthemesnet/mundana-theme-jekyll
 
 2020-12-28
 1. add interface intro
-2. add faststore intro
+
+2020-12-30
+1. add faststore intro
