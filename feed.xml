@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.2.0">Jekyll</generator><link href="/feed.xml" rel="self" type="application/atom+xml" /><link href="/" rel="alternate" type="text/html" /><updated>2021-03-01T06:35:43+00:00</updated><id>/feed.xml</id><title type="html">Fastcfs</title><subtitle>FastCFS is a high performance distributed file storage system.</subtitle><entry><title type="html">FastCFS核心组件FastStore架构及特点</title><link href="/2020/12/30/intro/" rel="alternate" type="text/html" title="FastCFS核心组件FastStore架构及特点" /><published>2020-12-30T00:00:00+00:00</published><updated>2020-12-30T00:00:00+00:00</updated><id>/2020/12/30/intro</id><content type="html" xml:base="/2020/12/30/intro/">&lt;blockquote&gt;
+  &lt;p&gt;作者: &lt;a href=&quot;https://github.com/happyfish100&quot;&gt;yuqing&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;&lt;a href=&quot;https://github.com/happyfish100/FastCFS&quot;&gt;&lt;img src=&quot;https://img.shields.io/badge/Powered%20By-Fastcfs-green.svg#align=left&amp;amp;display=inline&amp;amp;height=20&amp;amp;margin=%5Bobject%20Object%5D&amp;amp;originHeight=20&amp;amp;originWidth=132&amp;amp;status=done&amp;amp;style=none&amp;amp;width=132&quot; alt=&quot;Fastcfs Badge&quot; /&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;上一篇文章介绍了FastCFS服务端两大核心组件：FastDIR和FastStore。其中FastDIR管理文件元数据，FastStore以分块方式存储文件内容。FastDIR和FastStore均采用Master/Slave结构，Master不需要手工配置，由程序自动选举产生，并且做到了failover。FastDIR架构是FastStore架构子集（特例），因此我们着重介绍FastStore的架构及其特点。&lt;/p&gt;
+
+&lt;p&gt;无图无真相，先上FastStore的架构图。&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/assets/2020/fastcfs/faststore.jpeg&quot; alt=&quot;faststore&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;FastStore对服务器和数据均采用分组方式，服务器分组简称 SG，为物理分组；数据分组简称 DG，为逻辑分组。FastStore的server各自管理数据块（文件块）索引，数据块的元数据采用无中心的分布式架构。FastStore本质是一个分布式KV系统，key是数据块所属的对象ID（inode） + 偏移量（offset），value是数据块内容。FastStore采用的数据路由规则：数据块key按数据分组数（DGC）求模得出所在的数据分组，即：block_hash_code % DGC。可见DGC一旦确定就不可更改，否则将导致数据访问混乱！如果数据增长远超预期需要增大DGC，只能搭建一套新集群，在新旧两套集群并存的情况下，把原有数据手工迁移到新集群，迁移完成后切换到新集群。&lt;/p&gt;
+
+&lt;p&gt;一个SG由一台到多台服务器组成，组内的数据是冗余关系（服务器数即数据副本数）。一个SG可以容纳多个DG，为了充分利用CPU等硬件资源，建议生产环境一个SG配置的DG数量不少于CPU核数 / 2，开发测试环境至少配置16个。建立FastCFS集群时，可以只有一组服务器（即一个SG）。为了便于以后增加SG进行扩容，DG数量（DGC）必须事先充足地预估数据规模后确定下来，生产环境建议最小配置 256。友情提示：尽可能乐观地预估数据增长规模，宁多勿少，不存在过犹不及的问题。&lt;/p&gt;
+
+&lt;p&gt;FastStore服务器扩容采用数据分裂的做法，支持在线扩容，可以一次扩容一组服务器。当集群规模较小（比如SG数 &amp;lt;= 4）时，建议一次扩容一倍。&lt;/p&gt;
+
+&lt;p&gt;总结一下FastStore的架构特点：&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;
+    &lt;p&gt;基于数据块的无中心设计（类一致性Hash），理论上可以无限扩容；&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;分组方式（SG和DG），简单高效；&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;数据分组内采用Master/Slave结构，简单有效的数据一致性保证。&lt;/p&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;保证数据一致性是分布式系统面临的挑战，FastCFS是如何做到的呢？敬请期待下回分解。&lt;/p&gt;</content><author><name>yuqing</name></author><category term="project" /><category term="fastcfs" /><summary type="html">作者: yuqing</summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="/assets/2020/intro/logo.png" /><media:content medium="image" url="/assets/2020/intro/logo.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry><entry><title type="html">FastCFS核心组件及访问方式</title><link href="/2020/12/28/intro/" rel="alternate" type="text/html" title="FastCFS核心组件及访问方式" /><published>2020-12-28T00:00:00+00:00</published><updated>2020-12-28T00:00:00+00:00</updated><id>/2020/12/28/intro</id><content type="html" xml:base="/2020/12/28/intro/">&lt;blockquote&gt;
+  &lt;p&gt;作者: &lt;a href=&quot;https://github.com/happyfish100&quot;&gt;yuqing&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;&lt;a href=&quot;https://github.com/happyfish100/FastCFS&quot;&gt;&lt;img src=&quot;https://img.shields.io/badge/Powered%20By-Fastcfs-green.svg#align=left&amp;amp;display=inline&amp;amp;height=20&amp;amp;margin=%5Bobject%20Object%5D&amp;amp;originHeight=20&amp;amp;originWidth=132&amp;amp;status=done&amp;amp;style=none&amp;amp;width=132&quot; alt=&quot;Fastcfs Badge&quot; /&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;FastCFS 是一款可以跑数据库的轻量级分布式存储系统，她为数据库和云平台提供后端存储，保证数据强一致性，解决大容量数据存储问题，做到了高可靠、高可用、高性能以及高扩展性。&lt;/p&gt;
+
+&lt;p&gt;FastCFS服务端两个核心组件是 FastStore 和 FastDIR。FastStore是基于块存储的分布式数据存储服务，其文件block大小为4MB，文件 inode + 文件偏移量 (offset)作为block的key，对应的文件内容为 value，FastStore本质是一个分布式Key-Value系统。FastDIR是高性能分布式目录服务，管理文件元数据，支持命名空间。命名空间用于隔离不同应用的文件目录结构，各个应用可以使用自己专属命名空间。若多个应用之间要共享文件目录结构，只需使用相同的命名空间即可。&lt;/p&gt;
+
+&lt;p&gt;FastCFS提供了三层访问方式（接口），如下图所示：&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/assets/2020/fastcfs/interface.jpeg&quot; alt=&quot;interface&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;最上层是标准文件接口和对象存储接口，其中基于FUSE的标准文件接口已经实现。可以使用FastCFS的fused模块mount到本地，为数据库、虚拟机以及其他使用标准文件接口的应用提供存储。&lt;/p&gt;
+
+&lt;p&gt;中间层是FastCFS提供的文件操作API，提供了 fcfs_api_open、fcfs_api_read、fcfs_api_write等函数（对应标准的open、read和write等）。使用此类接口，可以在用户态直接访问FastCFS分布式文件系统。在追求极致性能的场景，可以使用此类接口，比如数据库厂商、分布式计算平台厂商等等。&lt;/p&gt;
+
+&lt;p&gt;最下层的FastStore API提供了文件块操作API，包括fs_api_slice_write、fs_api_slice_read、fs_api_slice_delete 等函数。如果不打算使用FastCFS提供的文件元数据管理（即FastDIR组件），可以直接使用此类API。通过调用本层API，FastCFS可以对外提供块设备，比如提供iSCSI接口（目前暂未支持，后续可以考虑支持）。&lt;/p&gt;
+
+&lt;p&gt;下一篇文章将介绍FastCFS架构及特点，敬请期待。&lt;/p&gt;</content><author><name>yuqing</name></author><category term="project" /><category term="fastcfs" /><summary type="html">作者: yuqing</summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="/assets/2020/intro/logo.png" /><media:content medium="image" url="/assets/2020/intro/logo.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry><entry><title type="html">可以跑数据库的分布式文件系统FastCFS</title><link href="/2020/12/25/intro/" rel="alternate" type="text/html" title="可以跑数据库的分布式文件系统FastCFS" /><published>2020-12-25T00:00:00+00:00</published><updated>2020-12-25T00:00:00+00:00</updated><id>/2020/12/25/intro</id><content type="html" xml:base="/2020/12/25/intro/">&lt;blockquote&gt;
+  &lt;p&gt;作者: &lt;a href=&quot;https://github.com/happyfish100&quot;&gt;yuqing&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;&lt;a href=&quot;https://github.com/happyfish100/FastCFS&quot;&gt;&lt;img src=&quot;https://img.shields.io/badge/Powered%20By-Fastcfs-green.svg#align=left&amp;amp;display=inline&amp;amp;height=20&amp;amp;margin=%5Bobject%20Object%5D&amp;amp;originHeight=20&amp;amp;originWidth=132&amp;amp;status=done&amp;amp;style=none&amp;amp;width=132&quot; alt=&quot;Fastcfs Badge&quot; /&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;FastCFS 是一款基于块存储的通用分布式文件系统，可以作为MySQL、PostgresSQL、Oracle等数据库和云平台的后端存储。&lt;/p&gt;
+
+&lt;p&gt;已经有了比较受欢迎的FastDFS，为啥还要研发FastCFS呢？FastDFS是轻量级的对象存储，只能通过专有API访问，为互联网应用量身定制，适合存放图片、视频、文档等等；而FastCFS是通用的分布式文件系统，可以mount到本机通过标准文件接口访问，为云平台量身定制，完全支持数据库。一句话总结：FastCFS是云原生分布式文件系统，保证数据强一致，比FastDFS更加通用和可靠。&lt;/p&gt;
+
+&lt;p&gt;为什么业界没有使用分布式文件系统跑数据库的惯例呢？我认为主要原因是现有分布式文件系统要么不支持数据库，要么支持得不好。因为数据库是IO密集型软件，对IO性能要求很高，并且对数据一致性要求非常严苛。FastCFS在保证数据强一致的前提下，同时做到了高性能，完全满足数据库对IO性能和数据一致性的严格要求。软件本身不应该成为系统的性能瓶颈，这是我奉行的原则并一直为之实践。若有朋友发现FastCFS在高端服务器上性能发挥不出来，欢迎来找我（tiguan）。分布式系统保证数据一致性的同时要做到高性能，挑战非常大，FastCFS是如何做到的呢？总结为两个关键词是简单高效和原生实现，后续会有文章介绍。&lt;/p&gt;
+
+&lt;p&gt;FastCFS完全自主研发（原生实现），除了依赖libfuse实现文件挂载外，不依赖任何第三方软件。FastCFS依赖的基础库libfastcommon来自FastDFS，目前非常成熟和稳定。&lt;/p&gt;
+
+&lt;p&gt;FastCFS 3人小团队历经11个月的研发，推出了FastCFS第一个可用版本，MySQL、PostgresSQL和Oracle可以跑通。FastCFS当前版本是v1.1.0，欢迎大家测试和使用。源码地址：https://github.com/happyfish100/FastCFS 或 https://gitee.com/fastdfs100/FastCFS。有任何问题请随时反馈，我们将快速修复和完善。&lt;/p&gt;</content><author><name>yuqing</name></author><category term="project" /><category term="fastcfs" /><summary type="html">作者: yuqing</summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="/assets/2020/intro/logo.png" /><media:content medium="image" url="/assets/2020/intro/logo.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry><entry><title type="html">intro（intro）</title><link href="/2020/09/05/intro/" rel="alternate" type="text/html" title="intro（intro）" /><published>2020-09-05T00:00:00+00:00</published><updated>2020-09-05T00:00:00+00:00</updated><id>/2020/09/05/intro</id><content type="html" xml:base="/2020/09/05/intro/">&lt;blockquote&gt;
+  &lt;p&gt;作者: &lt;a href=&quot;https://github.com/happyfish100&quot;&gt;yuqing&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;&lt;a href=&quot;https://github.com/happyfish100/FastCFS&quot;&gt;&lt;img src=&quot;https://img.shields.io/badge/Powered%20By-Fastcfs-green.svg#align=left&amp;amp;display=inline&amp;amp;height=20&amp;amp;margin=%5Bobject%20Object%5D&amp;amp;originHeight=20&amp;amp;originWidth=132&amp;amp;status=done&amp;amp;style=none&amp;amp;width=132&quot; alt=&quot;Fastcfs Badge&quot; /&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;h2 id=&quot;1-about&quot;&gt;1. About&lt;/h2&gt;
+
+&lt;p&gt;FastCFS is a high performance distributed file storage system.&lt;/p&gt;
+
+&lt;h2 id=&quot;2-development-status&quot;&gt;2. Development Status&lt;/h2&gt;
+
+&lt;p&gt;Developing&lt;/p&gt;
+
+&lt;h2 id=&quot;3-supported-platform&quot;&gt;3. Supported Platform&lt;/h2&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;CentOS (version 7.8 or newer)&lt;/li&gt;
+  &lt;li&gt;Ubuntu (Testing)&lt;/li&gt;
+  &lt;li&gt;BSD (Testing)&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&quot;4-dependencies&quot;&gt;4. Dependencies&lt;/h2&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;&lt;a href=&quot;https://github.com/libfuse/libfuse&quot;&gt;libfuse&lt;/a&gt; (version 3.9.4 or newer)
+    &lt;ul&gt;
+      &lt;li&gt;&lt;a href=&quot;https://python.org/&quot;&gt;Python&lt;/a&gt; (version 3.5 or newer)&lt;/li&gt;
+      &lt;li&gt;&lt;a href=&quot;https://ninja-build.org/&quot;&gt;Ninja&lt;/a&gt; (version 1.7 or newer)&lt;/li&gt;
+      &lt;li&gt;&lt;a href=&quot;https://www.gnu.org/software/gcc/&quot;&gt;gcc&lt;/a&gt; (version 7.5.0 or newer)&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://github.com/happyfish100/libfastcommon&quot;&gt;libfastcommon&lt;/a&gt; (version commit-c2d8faa)&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://github.com/happyfish100/libserverframe&quot;&gt;libserverframe&lt;/a&gt; (version commit-02adaac)&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://github.com/happyfish100/fastDIR&quot;&gt;fastDIR&lt;/a&gt; (version commit-62cab21)&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&quot;5-installation&quot;&gt;5. Installation&lt;/h2&gt;
+
+&lt;h3 id=&quot;51-libfastcommon&quot;&gt;5.1. libfastcommon&lt;/h3&gt;
+
+&lt;p&gt;版本号：version 1.43&lt;/p&gt;
+
+&lt;p&gt;```shell script
+git clone https://github.com/happyfish100/libfastcommon.git
+cd libfastcommon/
+git checkout master
+./make.sh clean &amp;amp;&amp;amp; ./make.sh &amp;amp;&amp;amp; ./make.sh install&lt;/p&gt;
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;
+默认安装目录：
+
+```shell script
+/usr/lib64
+/usr/lib
+/usr/include/fastcommon
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;52-libserverframe&quot;&gt;5.2. libserverframe&lt;/h3&gt;
+
+&lt;p&gt;```shell script
+git clone https://github.com/happyfish100/libserverframe.git
+./make.sh
+./make.sh install&lt;/p&gt;
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;
+### 5.3. fastDIR
+
+```shell script
+git clone https://github.com/happyfish100/fastDIR.git
+./make.sh
+./make.sh install
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;编译警告信息：&lt;/p&gt;
+
+&lt;p&gt;```shell script
+perl: warning: Setting locale failed.
+perl: warning: Please check that your locale settings:
+LANGUAGE = (unset),
+LC_ALL = (unset),
+LC_CTYPE = “UTF-8”,
+LANG = “en_US.UTF-8”
+are supported and installed on your system.
+perl: warning: Falling back to the standard locale (“C”).&lt;/p&gt;
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;
+可以修改/etc/profile，增加export LC_ALL=C解决上这个警告（记得刷新当前session：. /etc/profile）
+头文件安装成功，其他目录创建失败。
+
+```shell script
+git clone https://github.com/happyfish100/faststore.git
+cd faststore/
+./make.sh
+./make.sh install
+cp conf/server.conf /etc/fdir/
+cp conf/client.conf /etc/fdir/
+mkdir /usr/local/faststore
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h2 id=&quot;6-configuration&quot;&gt;6. Configuration&lt;/h2&gt;
+
+&lt;p&gt;In order to control FastCFS’s performance, we provide highly configurable and tunable behavior for FastCFS via various settings.&lt;/p&gt;
+
+&lt;p&gt;FastCFS’s configuration comprise multiple subfiles, one entry file and others use to reference. The directory /etc/fstore is the default location for FastCFS’s config files, but when install multiple FastCFS instances on a single server, you must specify distinct location for each one.&lt;/p&gt;
+
+&lt;p&gt;FastCFS has the following config files:&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;cluster.conf&lt;/li&gt;
+  &lt;li&gt;server.conf&lt;/li&gt;
+  &lt;li&gt;servers.conf&lt;/li&gt;
+  &lt;li&gt;storage.conf&lt;/li&gt;
+  &lt;li&gt;client.conf - Use with client，need to reference cluster.conf&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h3 id=&quot;61-configure-serverconf&quot;&gt;6.1. Configure server.conf&lt;/h3&gt;
+
+&lt;h3 id=&quot;62-clusterconf-configure&quot;&gt;6.2. cluster.conf configure&lt;/h3&gt;
+
+&lt;h3 id=&quot;63-serversconf-configure&quot;&gt;6.3. servers.conf configure&lt;/h3&gt;
+
+&lt;h3 id=&quot;64-storageconf-configure&quot;&gt;6.4. storage.conf configure&lt;/h3&gt;
+
+&lt;h3 id=&quot;65-clientconf-configure&quot;&gt;6.5. client.conf configure&lt;/h3&gt;
+
+&lt;h2 id=&quot;running&quot;&gt;Running&lt;/h2&gt;
+
+&lt;p&gt;Coming soon.&lt;/p&gt;
+
+&lt;h2 id=&quot;license&quot;&gt;License&lt;/h2&gt;
+
+&lt;p&gt;FastCFS is Open Source software released under the GNU General Public License V3.&lt;/p&gt;
+
+&lt;h2 id=&quot;logo&quot;&gt;logo&lt;/h2&gt;
+
+&lt;p&gt;&lt;img src=&quot;/assets/2020/intro/logo.png&quot; alt=&quot;logo&quot; /&gt;&lt;/p&gt;
+
+&lt;h2 id=&quot;致谢&quot;&gt;致谢&lt;/h2&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;感谢&lt;a href=&quot;https://fastcfs.github.io&quot;&gt;Fastcfs&lt;/a&gt;团队提供分布式存储&lt;/li&gt;
+&lt;/ul&gt;</content><author><name>yuqing</name></author><category term="project" /><category term="fastcfs" /><summary type="html">作者: yuqing</summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="/assets/2020/intro/logo.png" /><media:content medium="image" url="/assets/2020/intro/logo.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry></feed>
